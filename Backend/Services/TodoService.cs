@@ -114,7 +114,7 @@ namespace Backend.Services
         {
             var todo = await (await _todos.FindAsync(x => x.Id == id)).SingleAsync();
             await _todos.DeleteManyAsync(
-                Builders<Todo>.Filter.Regex(p => p.ParentPath, new BsonRegularExpression("^" + todo.ParentPath)));
+                Builders<Todo>.Filter.Regex(p => p.ParentPath, new BsonRegularExpression("^" + todo.ParentPath + "/" + todo.Id)));
             await _todos.DeleteOneAsync(x => x.Id == id);
         }
 

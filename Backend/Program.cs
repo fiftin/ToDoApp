@@ -1,3 +1,4 @@
+using Backend.Services;
 using Microsoft.Extensions.Hosting.WindowsServices;
 
 var options = new WebApplicationOptions
@@ -17,6 +18,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Host.UseWindowsService();
+builder.Services.AddSingleton<ITodoService, TodoService>();
 
 var app = builder.Build();
 

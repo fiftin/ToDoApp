@@ -55,8 +55,6 @@ namespace Backend.Services
                 var parent = todoWrappers.Single(x => x.Todo.Id == wrapper.Todo.ParentId);
 
                 parent.Items.Add(wrapper);
-
-                Console.WriteLine(parent.Items.Count);
             }
 
             var sortedTodos = new List<Todo>();
@@ -113,8 +111,12 @@ namespace Backend.Services
         public async Task RemoveAsync(string id)
         {
             var todo = await (await _todos.FindAsync(x => x.Id == id)).SingleAsync();
+
             await _todos.DeleteManyAsync(
-                Builders<Todo>.Filter.Regex(p => p.ParentPath, new BsonRegularExpression("^" + todo.ParentPath + "/" + todo.Id)));
+                Builders<Todo>.Filter.Regex(
+                    p => p.ParentPath, 
+                    new BsonRegularExpression("^" + todo.Path)));
+
             await _todos.DeleteOneAsync(x => x.Id == id);
         }
 

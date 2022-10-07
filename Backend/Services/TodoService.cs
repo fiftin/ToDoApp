@@ -1,8 +1,6 @@
 ﻿using Backend.Models;
-using DnsClient.Protocol;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using System.Runtime.CompilerServices;
 
 namespace Backend.Services
 {
@@ -15,6 +13,62 @@ namespace Backend.Services
         Task SetIsDoneAsync(string id, bool isDone);
 
         Task SetTextAsync(string id, string text);
+    }
+
+    public static class TodoSorter
+    {
+        class TodoWrapper
+        {
+            public Todo Todo { get; set; }
+            public List<TodoWrapper> Items { get; } = new List<TodoWrapper>();
+
+            public TodoWrapper(Todo todo)
+            {
+                this.Todo = todo;
+            }
+
+            public List<Todo> Flat()
+            {
+                var ret = new List<Todo>();
+                ret.Add(Todo);
+
+                foreach (var item in Items)
+                {
+                    ret.AddRange(item.Flat());
+                }
+                return ret;
+            }
+        }
+
+
+        public static List<Todo> SortTodos(List<Todo> todos)
+        {
+            var todoWrappers = todos.Select(x => new TodoWrapper(x)).ToList();
+
+            foreach (var wrapper in todoWrappers)
+            {
+                if (wrapper.Todo.ParentPath == null)
+                {
+                    continue;
+                }
+
+                var parent = todoWrappers.Single(x => x.Todo.Id == wrapper.Todo.ParentId);
+
+                parent.Items.Add(wrapper);
+
+                Console.WriteLine(parent.Items.Count);
+            }
+
+            var sortedTodos = new List<Todo>();
+
+            foreach (var rootWrapper in todoWrappers.Where(x => x.Todo.ParentPath == null))
+            {
+                sortedTodos.AddRange(rootWrapper.Flat());
+            }
+
+            return sortedTodos;
+        }
+
     }
 
     public class TodoService : ITodoService
@@ -34,18 +88,7 @@ namespace Backend.Services
                 .SortBy(x => x.CreatedAt)
                 .ToListAsync();
 
-            foreach (var todo in todos)
-            {
-                if (todo.ParentId == null) {
-                    continue;
-                }
-
-                var parent = todos.Single(x => x.Id == todo.ParentId);
-
-                parent.Items.Add(todo);
-            }
-
-            return todos.FindAll(x => x.ParentId == null);
+            return TodoSorter.SortTodos(todos);
         }
 
         public async Task<Todo> CreateAsync(Todo todo)

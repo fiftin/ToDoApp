@@ -18,8 +18,6 @@ namespace Backend.Models
 
         public DateTime CreatedAt { get; set; }
 
-        public List<Todo> Items { get; set; } = new List<Todo>();
-
         [BsonRepresentation(BsonType.ObjectId)]
         public string? ParentId { 
             get

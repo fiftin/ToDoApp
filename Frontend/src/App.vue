@@ -1,27 +1,38 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js + TypeScript App"/>
+
+  <h1>To Do</h1>
+
+  <TodoView 
+    :style="{marginLeft: `${(todo.parentPath || '').length}px`}" 
+    v-for="todo in todos.items" 
+    :todo="todo" 
+    :key="todo.id" 
+  />
+
 </template>
 
-<script lang="ts">
-import { defineComponent } from 'vue';
-import HelloWorld from './components/HelloWorld.vue';
+<script setup lang="ts">
+    import {
+        plainToInstance,
+    } from 'class-transformer';
 
-export default defineComponent({
-  name: 'App',
-  components: {
-    HelloWorld
-  }
-});
+    import { reactive } from 'vue';
+
+    import Todo from './models/Todo';
+
+    import TodoView from './components/TodoView.vue';
+
+    const todos = reactive({ items: new Array<Todo>() });
+
+    fetch('todos')
+        .then(r => r.json())
+        .then(json => {
+            todos.items = plainToInstance(Todo, json as unknown[]);
+        });
 </script>
 
 <style>
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
 }
 </style>

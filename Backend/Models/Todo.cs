@@ -25,7 +25,6 @@ namespace Backend.Models
                 return ParentPath?.Split("/").Last();
             } 
         }
-
         public string Path
         {
             get
@@ -36,6 +35,26 @@ namespace Backend.Models
                 }
 
                 return string.Join("/", ParentPath, Id);
+            }
+        }
+
+        public string? GrandparentPath
+        {
+            get
+            {
+                if (ParentPath == null)
+                {
+                    return null;
+                }
+
+                var parts = ParentPath.Split("/").SkipLast(1);
+
+                if (parts.Count() == 0)
+                {
+                    return null;
+                }
+
+                return  string.Join("/", parts);
             }
         }
     }

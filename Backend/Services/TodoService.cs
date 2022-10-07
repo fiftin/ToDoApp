@@ -85,7 +85,7 @@ namespace Backend.Services
         {
             var todos = await _todos
                 .Find(_ => true)
-                .SortBy(x => x.CreatedAt)
+                .SortByDescending(x => x.CreatedAt)
                 .ToListAsync();
 
             return TodoSorter.SortTodos(todos);
@@ -94,6 +94,13 @@ namespace Backend.Services
         public async Task<Todo> CreateAsync(Todo todo)
         {
             var id = ObjectId.GenerateNewId().ToString();
+
+            var parentOk = todo.ParentPath == null || 
+                (await _todos.FindAsync(x => x.Id == todo.ParentId && x.ParentPath == todo.GrandparentPath)).Any();
+            if (!parentOk)
+            {
+                throw new Exception("Not found");
+            }
 
             todo.Id = id;
             todo.CreatedAt = DateTime.Now;
@@ -106,7 +113,8 @@ namespace Backend.Services
         public async Task RemoveAsync(string id)
         {
             var todo = await (await _todos.FindAsync(x => x.Id == id)).SingleAsync();
-            await _todos.DeleteManyAsync(x => x.ParentPath == todo.Path);
+            await _todos.DeleteManyAsync(
+                Builders<Todo>.Filter.Regex(p => p.ParentPath, new BsonRegularExpression("^" + todo.ParentPath)));
             await _todos.DeleteOneAsync(x => x.Id == id);
         }
 

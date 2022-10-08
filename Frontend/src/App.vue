@@ -17,7 +17,6 @@
               :todo="todo"
               :key="todo.id"
               @changed="loadTodos()" />
-
 </template>
 
 <script setup lang="ts">
@@ -26,7 +25,7 @@
     import Todo from './models/Todo';
     import TodoView from './components/TodoView.vue';
 
-
+    const todos = reactive({ items: new Array<Todo>() });
     const newTodo = ref(false);
     const newTodoText = ref('');
 
@@ -40,13 +39,11 @@
                 text: newTodoText.value
             }),
         });
+
         newTodo.value = false;
         newTodoText.value = '';
-
         await loadTodos();
     }
-
-    const todos = reactive({ items: new Array<Todo>() });
 
     async function loadTodos() {
         const json = await fetch('todos').then(r => r.json());

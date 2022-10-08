@@ -72,10 +72,11 @@ namespace Backend.Services
     public class TodoService : ITodoService
     {
         private readonly IMongoCollection<Todo> _todos;
+        private readonly MongoClient _client;
         public TodoService()
         {
-            var mongoClient = new MongoClient("mongodb://localhost:27017");
-            var db = mongoClient.GetDatabase("TodoApp");
+            _client = new MongoClient("mongodb://localhost:27017");
+            var db = _client.GetDatabase("TodoApp");
             _todos = db.GetCollection<Todo>("Todos");
         }
 
@@ -112,19 +113,48 @@ namespace Backend.Services
         {
             var todo = await (await _todos.FindAsync(x => x.Id == id)).SingleAsync();
 
-            await _todos.DeleteManyAsync(
-                Builders<Todo>.Filter.Regex(
-                    p => p.ParentPath, 
-                    new BsonRegularExpression("^" + todo.Path)));
+            using (var session = await _client.StartSessionAsync())
+            {
+                await _todos.DeleteManyAsync(
+                    session,
+                    Builders<Todo>.Filter.Regex(
+                        p => p.ParentPath,
+                        new BsonRegularExpression("^" + todo.Path)));
 
-            await _todos.DeleteOneAsync(x => x.Id == id);
+                await _todos.DeleteOneAsync(session, x => x.Id == id);
+            }
         }
 
         public async Task SetIsDoneAsync(string id, bool isDone)
         {
-            await _todos.UpdateOneAsync(
-                Builders<Todo>.Filter.Eq(p => p.Id, id),
-                Builders<Todo>.Update.Set(p => p.IsDone, isDone));
+            var todo = await (await _todos.FindAsync(x => x.Id == id)).SingleAsync();
+
+            using (var session = await _client.StartSessionAsync())
+            {
+                await _todos.UpdateOneAsync(
+                    session,
+                    Builders<Todo>.Filter.Eq(p => p.Id, id),
+                    Builders<Todo>.Update.Set(p => p.IsDone, isDone));
+
+                if (isDone)
+                {
+                    var res = await _todos.UpdateManyAsync(
+                        session,
+                        Builders<Todo>.Filter.Regex(
+                            p => p.ParentPath,
+                            new BsonRegularExpression("^" + todo.Path)),
+                        Builders<Todo>.Update.Set(p => p.IsDone, isDone));
+                } else if (todo.ParentPath != null)
+                {
+                    var parts = todo.ParentPath.Split("/");
+                    await _todos.UpdateManyAsync(
+                        session,
+                        Builders<Todo>.Filter.In(
+                            p => p.Id,
+                            parts),
+                        Builders<Todo>.Update.Set(p => p.IsDone, isDone));
+                }
+            }
         }
 
         public async Task SetTextAsync(string id, string text)

@@ -1,6 +1,7 @@
 ﻿using Backend.Models;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using System.Runtime.CompilerServices;
 
 namespace Backend.Services
 {
@@ -104,7 +105,22 @@ namespace Backend.Services
             todo.Id = id;
             todo.CreatedAt = DateTime.Now;
             
-            await _todos.InsertOneAsync(todo);
+            using (var session = await _client.StartSessionAsync())
+            {
+                await _todos.InsertOneAsync(todo);
+
+                if (todo.ParentPath != null)
+                {
+                    var parts = todo.ParentPath.Split("/");
+
+                    await _todos.UpdateManyAsync(
+                        session,
+                        Builders<Todo>.Filter.In(
+                            p => p.Id,
+                    parts),
+                        Builders<Todo>.Update.Set(p => p.IsDone, false));
+                }
+            }
 
             return todo;
         }
